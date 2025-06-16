@@ -3,20 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title> CTF Tracker </title>
+  <title>CTF Tracker</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* Retro hacker vibe */
+    /* Retro hacker vibe with modern clean layout */
     body {
       background: #0f0f0f;
       color: #66ff66;
       font-family: 'Courier New', Courier, monospace;
-      margin: 0; padding: 20px;
+      margin: 0;
+      padding: 20px 30px;
       user-select: none;
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.4;
     }
     h1 {
-      border-bottom: 2px solid #33cc33;
+      border-bottom: 3px solid #33cc33;
       padding-bottom: 10px;
       margin-bottom: 20px;
+      font-weight: 700;
+      font-size: 2.4rem;
+    }
+    nav {
+      margin-bottom: 25px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    nav a {
+      color: #44cc44;
+      text-decoration: none;
+      font-weight: bold;
+      border: 1px solid transparent;
+      padding: 6px 12px;
+      border-radius: 4px;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    nav a:hover {
+      background-color: #33cc33;
+      color: #000;
+      border-color: #22aa22;
+    }
+    label {
+      margin-top: 12px;
+      display: block;
+      font-size: 0.95em;
+      color: #44aa44;
     }
     input, textarea, select, button {
       background: #111;
@@ -28,6 +63,7 @@
       width: 100%;
       box-sizing: border-box;
       border-radius: 4px;
+      font-size: 1rem;
     }
     button {
       cursor: pointer;
@@ -38,24 +74,20 @@
       background-color: #33cc33;
       color: #000;
     }
-    label {
-      margin-top: 12px;
-      display: block;
-      font-size: 0.9em;
-      color: #44aa44;
-    }
     #log-entries {
       margin-top: 30px;
     }
     .entry {
       border: 1px solid #33cc33;
-      padding: 12px;
+      padding: 12px 16px;
       margin-bottom: 12px;
       border-radius: 8px;
       background: #111;
+      font-size: 0.95rem;
     }
     .entry strong {
       color: #aaffaa;
+      font-size: 1.05rem;
     }
     a {
       color: #44cc44;
@@ -68,6 +100,7 @@
     }
     .flex-grow {
       flex: 1 1 200px;
+      min-width: 150px;
     }
     #token-section {
       margin-bottom: 30px;
@@ -84,11 +117,42 @@
       width: auto;
       flex: none;
     }
+    /* Chart container styling */
+    #charts-section {
+      margin-top: 40px;
+      border-top: 2px solid #33cc33;
+      padding-top: 20px;
+    }
+    canvas {
+      background: #111;
+      border: 1px solid #33cc33;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      max-width: 100%;
+      height: 300px !important;
+    }
+    /* Responsive */
+    @media (max-width: 600px) {
+      .flex-row {
+        flex-direction: column;
+      }
+      nav {
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 <body>
 
   <h1>🧪 CTF Tracker - Retro Hacker</h1>
+
+  <nav>
+    <a href="#token-section">Token</a>
+    <a href="#ctf-form">Add Entry</a>
+    <a href="#filter-section">Filters</a>
+    <a href="#log-entries">Entries</a>
+    <a href="#charts-section">Charts</a>
+  </nav>
 
   <div id="token-section">
     <label for="token-input"><strong>Enter your GitHub Personal Access Token (PAT):</strong></label>
@@ -155,7 +219,7 @@
 
   <div id="filter-section">
     <h3>Filter entries</h3>
-    <div class="flex-row">
+    <div class="flex-row" style="align-items:center;">
       <input type="month" id="filter-date" class="small-input" />
       <input type="text" id="filter-category" placeholder="Category filter" class="small-input" />
       <button id="apply-filter-btn">Apply Filter</button>
@@ -163,10 +227,17 @@
     </div>
   </div>
 
-  <h2>CTF Entries</h2>
+  <h2 id="log-entries-title">CTF Entries</h2>
   <div id="log-entries">
     <p>Loading entries...</p>
   </div>
+
+  <section id="charts-section">
+    <h2>📊 CTF Stats & Charts</h2>
+    <canvas id="category-count-chart"></canvas>
+    <canvas id="category-points-chart"></canvas>
+    <canvas id="monthly-entries-chart"></canvas>
+  </section>
 
 <script>
 (() => {
@@ -210,6 +281,7 @@
       const content = atob(data.content);
       ctfLog = JSON.parse(content);
       renderEntries(ctfLog);
+      updateCharts(ctfLog);
     } catch (err) {
       setStatus("Error loading entries: " + err.message);
     }
@@ -257,6 +329,7 @@
       return matchDate && matchCategory;
     });
     renderEntries(filtered);
+    updateCharts(filtered);
   });
 
   // Clear filter
@@ -264,6 +337,7 @@
     $('filter-date').value = '';
     $('filter-category').value = '';
     renderEntries(ctfLog);
+    updateCharts(ctfLog);
   });
 
   // Add new entry form submit
@@ -321,6 +395,7 @@
       shaOfFile = data.content.sha;
       alert("Entry added successfully!");
       renderEntries(ctfLog);
+      updateCharts(ctfLog);
       $('ctf-form').reset();
       setStatus("");
     } catch (err) {
@@ -328,8 +403,110 @@
     }
   }
 
-})();
-</script>
+  // Chart instances
+  let categoryCountChart = null;
+  let categoryPointsChart = null;
+  let monthlyEntriesChart = null;
 
-</body>
-</html>
+  // Prepare and update charts
+  function updateCharts(entries) {
+    // Data aggregation
+    const categoryCounts = {};
+    const categoryPoints = {};
+    const monthlyCounts = {};
+
+    entries.forEach(e => {
+      const cat = e.category || 'Uncategorized';
+      const pts = parseInt(e.points) || 0;
+      const month = e.date ? e.date.slice(0,7) : 'Unknown';
+
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      categoryPoints[cat] = (categoryPoints[cat] || 0) + pts;
+      monthlyCounts[month] = (monthlyCounts[month] || 0) + 1;
+    });
+
+    // Sort keys
+    const sortedCats = Object.keys(categoryCounts).sort();
+    const sortedMonths = Object.keys(monthlyCounts).sort();
+
+    // Destroy old charts if exist
+    if(categoryCountChart) categoryCountChart.destroy();
+    if(categoryPointsChart) categoryPointsChart.destroy();
+    if(monthlyEntriesChart) monthlyEntriesChart.destroy();
+
+    // Category Count Chart (Bar)
+    const ctx1 = document.getElementById('category-count-chart').getContext('2d');
+    categoryCountChart = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: sortedCats,
+        datasets: [{
+          label: '# of CTF Entries',
+          data: sortedCats.map(cat => categoryCounts[cat]),
+          backgroundColor: '#33cc33aa',
+          borderColor: '#33cc33',
+          borderWidth: 1,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        },
+        plugins: {
+          legend: { labels: { color: '#66ff66' } }
+        }
+      }
+    });
+
+    // Category Points Chart (Bar)
+    const ctx2 = document.getElementById('category-points-chart').getContext('2d');
+    categoryPointsChart = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedCats,
+        datasets: [{
+          label: 'Total Points',
+          data: sortedCats.map(cat => categoryPoints[cat]),
+          backgroundColor: '#66ff66aa',
+          borderColor: '#66ff66',
+          borderWidth: 1,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        },
+        plugins: {
+          legend: { labels: { color: '#66ff66' } }
+        }
+      }
+    });
+
+    // Monthly Entries Chart (Line)
+    const ctx3 = document.getElementById('monthly-entries-chart').getContext('2d');
+    monthlyEntriesChart = new Chart(ctx3, {
+      type: 'line',
+      data: {
+        labels: sortedMonths,
+        datasets: [{
+          label: 'Entries per Month',
+          data: sortedMonths.map(month => monthlyCounts[month]),
+          borderColor: '#33cc33',
+          backgroundColor: '#33cc33aa',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, stepSize: 1 }
+        },
+        plugins: {
+          legend: { labels: { color: '#66ff66' } }
+        }
+      }
