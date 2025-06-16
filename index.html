@@ -4,509 +4,244 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CTF Tracker</title>
-  <!-- Chart.js CDN -->
+  <!-- Linking Chart.js CDN so we can make those cool charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* Retro hacker vibe with modern clean layout */
+    /* Just some basic styling to make it look neat */
     body {
-      background: #0f0f0f;
-      color: #66ff66;
-      font-family: 'Courier New', Courier, monospace;
-      margin: 0;
-      padding: 20px 30px;
-      user-select: none;
-      max-width: 960px;
-      margin-left: auto;
-      margin-right: auto;
-      line-height: 1.4;
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
     }
-    h1 {
-      border-bottom: 3px solid #33cc33;
-      padding-bottom: 10px;
-      margin-bottom: 20px;
-      font-weight: 700;
-      font-size: 2.4rem;
+    .tab {
+      cursor: pointer;
+      padding: 10px 20px;
+      background-color: #ddd;
+      display: inline-block;
+      margin-right: 5px;
+      border-radius: 5px 5px 0 0;
     }
-    nav {
-      margin-bottom: 25px;
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
+    .tab.active {
+      background-color: #0077cc;
+      color: white;
     }
-    nav a {
-      color: #44cc44;
-      text-decoration: none;
-      font-weight: bold;
-      border: 1px solid transparent;
-      padding: 6px 12px;
-      border-radius: 4px;
-      transition: background-color 0.3s ease, border-color 0.3s ease;
+    .tab-content {
+      background: white;
+      padding: 20px;
+      border-radius: 0 5px 5px 5px;
+      box-shadow: 0 0 10px #ccc;
+      margin-top: -5px;
     }
-    nav a:hover {
-      background-color: #33cc33;
-      color: #000;
-      border-color: #22aa22;
-    }
-    label {
-      margin-top: 12px;
-      display: block;
-      font-size: 0.95em;
-      color: #44aa44;
-    }
-    input, textarea, select, button {
-      background: #111;
-      border: 1px solid #33cc33;
-      color: #66ff66;
-      font-family: monospace;
+    input, select, button {
+      margin-top: 10px;
       padding: 8px;
-      margin: 5px 0;
       width: 100%;
       box-sizing: border-box;
-      border-radius: 4px;
-      font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
     button {
+      background-color: #0077cc;
+      color: white;
+      border: none;
       cursor: pointer;
-      font-weight: bold;
-      transition: background-color 0.2s ease;
     }
     button:hover {
-      background-color: #33cc33;
-      color: #000;
-    }
-    #log-entries {
-      margin-top: 30px;
-    }
-    .entry {
-      border: 1px solid #33cc33;
-      padding: 12px 16px;
-      margin-bottom: 12px;
-      border-radius: 8px;
-      background: #111;
-      font-size: 0.95rem;
-    }
-    .entry strong {
-      color: #aaffaa;
-      font-size: 1.05rem;
-    }
-    a {
-      color: #44cc44;
-      text-decoration: underline;
-    }
-    .flex-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .flex-grow {
-      flex: 1 1 200px;
-      min-width: 150px;
-    }
-    #token-section {
-      margin-bottom: 30px;
-      border-bottom: 2px solid #33cc33;
-      padding-bottom: 20px;
-    }
-    #filter-section {
-      margin-top: 20px;
-      margin-bottom: 30px;
-      border-bottom: 2px solid #33cc33;
-      padding-bottom: 20px;
-    }
-    .small-input {
-      width: auto;
-      flex: none;
-    }
-    /* Chart container styling */
-    #charts-section {
-      margin-top: 40px;
-      border-top: 2px solid #33cc33;
-      padding-top: 20px;
+      background-color: #005fa3;
     }
     canvas {
-      background: #111;
-      border: 1px solid #33cc33;
-      border-radius: 8px;
-      margin-bottom: 30px;
       max-width: 100%;
-      height: 300px !important;
-    }
-    /* Responsive */
-    @media (max-width: 600px) {
-      .flex-row {
-        flex-direction: column;
-      }
-      nav {
-        justify-content: center;
-      }
+      margin-top: 30px;
     }
   </style>
 </head>
 <body>
 
-  <h1> CTF Tracker </h1>
+<!-- Tabs for switching between forms and charts -->
+<div>
+  <div id="tab-input" class="tab active">Add CTF Result</div>
+  <div id="tab-charts" class="tab">View Charts</div>
+</div>
 
-  <nav>
-    <a href="#token-section">Token</a>
-    <a href="#ctf-form">Add Entry</a>
-    <a href="#filter-section">Filters</a>
-    <a href="#log-entries">Entries</a>
-    <a href="#charts-section">Charts</a>
-  </nav>
-
-  <div id="token-section">
-    <label for="token-input"><strong>Enter your GitHub Personal Access Token (PAT):</strong></label>
-    <input type="password" id="token-input" placeholder="GitHub PAT (repo scope)" />
-    <button id="save-token-btn">Save Token</button>
-    <p style="font-size: 0.9em; color:#aaa;">
-      (Your token stays in this browser session only, not saved on any server.)
-    </p>
+<!-- Main content container -->
+<div id="content" class="tab-content">
+  <!-- Input form for adding your CTF results -->
+  <div id="input-form">
+    <h2>Log Your CTF Challenge</h2>
+    <input id="competition-name" placeholder="Competition Name (e.g. picoCTF)" />
+    <input id="challenge-name" placeholder="Challenge Name" />
+    <select id="placement">
+      <option value="">Placement (leave blank if none)</option>
+      <option value="1">1st Place 🏆</option>
+      <option value="2">2nd Place 🥈</option>
+      <option value="3">3rd Place 🥉</option>
+      <option value="participant">Participant</option>
+    </select>
+    <input id="points" type="number" placeholder="Points earned (like 100)" />
+    <input id="date" type="date" />
+    <button id="add-entry">Add Entry</button>
   </div>
 
-  <form id="ctf-form">
-    <div class="flex-row">
-      <div class="flex-grow">
-        <label for="date">Date (YYYY-MM-DD):</label>
-        <input type="date" id="date" required />
-      </div>
-      <div class="flex-grow">
-        <label for="name">CTF Name:</label>
-        <input type="text" id="name" placeholder="e.g. HackTheBox" required />
-      </div>
-    </div>
-
-    <div class="flex-row">
-      <div class="flex-grow">
-        <label for="platform">Platform:</label>
-        <input type="text" id="platform" placeholder="e.g. HTB, CTFTime" required />
-      </div>
-      <div class="flex-grow">
-        <label for="team">Team Name:</label>
-        <input type="text" id="team" placeholder="Optional" />
-      </div>
-    </div>
-
-    <div class="flex-row">
-      <div class="flex-grow">
-        <label for="category">Category:</label>
-        <input type="text" id="category" placeholder="e.g. Web, Pwn, Crypto" />
-      </div>
-      <div class="flex-grow">
-        <label for="challenge">Challenges Completed:</label>
-        <input type="text" id="challenge" placeholder="Comma-separated" />
-      </div>
-    </div>
-
-    <div class="flex-row">
-      <div class="flex-grow">
-        <label for="points">Points:</label>
-        <input type="number" id="points" min="0" />
-      </div>
-      <div class="flex-grow">
-        <label for="placement">Placement:</label>
-        <input type="text" id="placement" placeholder="e.g. 3rd, Top 10" />
-      </div>
-    </div>
-
-    <label for="writeup">Writeup Link:</label>
-    <input type="url" id="writeup" placeholder="Optional" />
-
-    <label for="notes">Notes:</label>
-    <textarea id="notes" rows="3" placeholder="Any notes..."></textarea>
-
-    <button type="submit" style="margin-top: 15px;">Add CTF Entry</button>
-  </form>
-
-  <div id="filter-section">
-    <h3>Filter entries</h3>
-    <div class="flex-row" style="align-items:center;">
-      <input type="month" id="filter-date" class="small-input" />
-      <input type="text" id="filter-category" placeholder="Category filter" class="small-input" />
-      <button id="apply-filter-btn">Apply Filter</button>
-      <button id="clear-filter-btn">Clear Filter</button>
-    </div>
+  <!-- Charts will be shown here, hidden by default -->
+  <div id="charts" style="display:none;">
+    <h2>Your CTF Stats</h2>
+    <canvas id="points-chart"></canvas>
+    <canvas id="placement-chart"></canvas>
   </div>
-
-  <h2 id="log-entries-title">CTF Entries</h2>
-  <div id="log-entries">
-    <p>Loading entries...</p>
-  </div>
-
-  <section id="charts-section">
-    <h2>📊 CTF Stats & Charts</h2>
-    <canvas id="category-count-chart"></canvas>
-    <canvas id="category-points-chart"></canvas>
-    <canvas id="monthly-entries-chart"></canvas>
-  </section>
+</div>
 
 <script>
 (() => {
-  const REPO_OWNER = "emiholleran";
-  const REPO_NAME = "ctf-tracker-site";
-  const FILE_PATH = "ctf_log.json";
+  // Okay, here we go — this app tracks your CTFs and shows cool charts
 
-  let githubToken = null;
-  let ctfLog = [];
-  let shaOfFile = null;
+  // State: holds all your entries
+  let ctfEntries = [];
 
-  const $ = (id) => document.getElementById(id);
-  const setStatus = (msg) => {
-    const logEntries = $('log-entries');
-    logEntries.innerHTML = '<p>' + msg + '</p>';
-  };
+  // Keeps track of which tab is currently active: "input" or "charts"
+  let currentTab = 'input';
 
-  // Save token button
-  $('save-token-btn').addEventListener('click', () => {
-    const token = $('token-input').value.trim();
-    if (!token) {
-      alert("Please enter your GitHub token.");
+  // Grab the DOM elements we'll need later
+  const tabInput = document.getElementById('tab-input');
+  const tabCharts = document.getElementById('tab-charts');
+  const inputForm = document.getElementById('input-form');
+  const chartsDiv = document.getElementById('charts');
+  const addEntryBtn = document.getElementById('add-entry');
+
+  // Chart.js objects so we can update charts later
+  let pointsChart;
+  let placementChart;
+
+  // When user clicks on the "Add Entry" button, this happens
+  addEntryBtn.addEventListener('click', () => {
+    // Get values from inputs, trimming just in case
+    const compName = document.getElementById('competition-name').value.trim();
+    const challengeName = document.getElementById('challenge-name').value.trim();
+    const placement = document.getElementById('placement').value;
+    const points = parseInt(document.getElementById('points').value, 10);
+    const date = document.getElementById('date').value;
+
+    // Quick input validation to not let empty stuff in
+    if (!compName || !challengeName || !date || isNaN(points)) {
+      alert('Hey! You gotta fill in Competition, Challenge, Points, and Date.');
       return;
     }
-    githubToken = token;
-    alert("Token saved in session. You can now add entries.");
-    fetchCTFLog();
+
+    // Add the new CTF entry to our array
+    ctfEntries.push({
+      competition: compName,
+      challenge: challengeName,
+      placement: placement || 'participant', // default to participant if none
+      points: points,
+      date: date
+    });
+
+    // Clear inputs for next entry because we’re neat like that
+    document.getElementById('competition-name').value = '';
+    document.getElementById('challenge-name').value = '';
+    document.getElementById('placement').value = '';
+    document.getElementById('points').value = '';
+    document.getElementById('date').value = '';
+
+    alert('Sweet! Your CTF result was added.');
+
+    // Optional: Could automatically switch to charts tab here if you want
   });
 
-  // Fetch the JSON log file from GitHub
-  async function fetchCTFLog() {
-    setStatus("Loading entries...");
-    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-    try {
-      const res = await fetch(url, {
-        headers: { Authorization: 'token ' + githubToken }
-      });
-      if (!res.ok) throw new Error("Failed to load log file: " + res.status);
-      const data = await res.json();
-      shaOfFile = data.sha;
-      const content = atob(data.content);
-      ctfLog = JSON.parse(content);
-      renderEntries(ctfLog);
-      updateCharts(ctfLog);
-    } catch (err) {
-      setStatus("Error loading entries: " + err.message);
+  // Tab switching function, keeps UI tidy
+  function switchTab(tab) {
+    currentTab = tab;
+    if (tab === 'input') {
+      tabInput.classList.add('active');
+      tabCharts.classList.remove('active');
+      inputForm.style.display = 'block';
+      chartsDiv.style.display = 'none';
+    } else if (tab === 'charts') {
+      tabInput.classList.remove('active');
+      tabCharts.classList.add('active');
+      inputForm.style.display = 'none';
+      chartsDiv.style.display = 'block';
+      renderCharts(); // Show the charts with fresh data
     }
   }
 
-  // Render the log entries on the page
-  function renderEntries(entries) {
-    const container = $('log-entries');
-    if (!entries.length) {
-      container.innerHTML = '<p>No entries found yet.</p>';
-      return;
-    }
-    container.innerHTML = "";
-    entries.forEach(entry => {
-      const div = document.createElement('div');
-      div.className = "entry";
-      div.innerHTML = `
-        <strong>${entry.date} - ${entry.name}</strong><br/>
-        <em>Platform:</em> ${entry.platform || '-'}<br/>
-        <em>Team:</em> ${entry.team || '-'}<br/>
-        <em>Category:</em> ${entry.category || '-'}<br/>
-        <em>Challenges:</em> ${entry.challenge || '-'}<br/>
-        <em>Points:</em> ${entry.points || '-'}<br/>
-        <em>Placement:</em> ${entry.placement || '-'}<br/>
-        ${entry.writeup ? `<em>Writeup:</em> <a href="${entry.writeup}" target="_blank" rel="noopener noreferrer">${entry.writeup}</a><br/>` : ''}
-        <em>Notes:</em> ${entry.notes || '-'}
-      `;
-      container.appendChild(div);
+  // Attach tab click events
+  tabInput.addEventListener('click', () => switchTab('input'));
+  tabCharts.addEventListener('click', () => switchTab('charts'));
+
+  // Function to make the charts with Chart.js using your data
+  function renderCharts() {
+    // Prepare data for points chart
+    const sortedEntries = [...ctfEntries].sort((a,b) => new Date(a.date) - new Date(b.date));
+    const pointsLabels = sortedEntries.map(e => `${e.competition} - ${e.challenge}`);
+    const pointsData = sortedEntries.map(e => e.points);
+
+    // For placement chart, count how many of each placement
+    const placementCounts = {};
+    ctfEntries.forEach(e => {
+      placementCounts[e.placement] = (placementCounts[e.placement] || 0) + 1;
     });
-  }
+    const placementLabels = Object.keys(placementCounts);
+    const placementData = Object.values(placementCounts);
 
-  // Filter entries
-  $('apply-filter-btn').addEventListener('click', () => {
-    const filterDate = $('filter-date').value;  // format YYYY-MM
-    const filterCategory = $('filter-category').value.trim().toLowerCase();
-    const filtered = ctfLog.filter(e => {
-      let matchDate = true;
-      let matchCategory = true;
-      if (filterDate) {
-        matchDate = e.date.startsWith(filterDate);
-      }
-      if (filterCategory) {
-        matchCategory = e.category && e.category.toLowerCase().includes(filterCategory);
-      }
-      return matchDate && matchCategory;
-    });
-    renderEntries(filtered);
-    updateCharts(filtered);
-  });
+    // Destroy old charts if they exist to avoid duplicates
+    if (pointsChart) pointsChart.destroy();
+    if (placementChart) placementChart.destroy();
 
-  // Clear filter
-  $('clear-filter-btn').addEventListener('click', () => {
-    $('filter-date').value = '';
-    $('filter-category').value = '';
-    renderEntries(ctfLog);
-    updateCharts(ctfLog);
-  });
-
-  // Add new entry form submit
-  $('ctf-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!githubToken) {
-      alert("Please enter and save your GitHub token first.");
-      return;
-    }
-
-    const newEntry = {
-      date: $('date').value,
-      name: $('name').value.trim(),
-      platform: $('platform').value.trim(),
-      team: $('team').value.trim(),
-      category: $('category').value.trim(),
-      challenge: $('challenge').value.trim(),
-      points: $('points').value.trim(),
-      placement: $('placement').value.trim(),
-      writeup: $('writeup').value.trim(),
-      notes: $('notes').value.trim(),
-    };
-
-    // Basic validation
-    if (!newEntry.date || !newEntry.name || !newEntry.platform) {
-      alert("Date, CTF Name, and Platform are required.");
-      return;
-    }
-
-    ctfLog.push(newEntry);
-    await updateLogFile();
-  });
-
-  // Update the JSON file in GitHub repo with new content
-  async function updateLogFile() {
-    setStatus("Saving entry to GitHub...");
-    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-    try {
-      const contentEncoded = btoa(JSON.stringify(ctfLog, null, 2));
-      const body = {
-        message: `Add CTF entry: ${ctfLog[ctfLog.length - 1].name} (${ctfLog[ctfLog.length - 1].date})`,
-        content: contentEncoded,
-        sha: shaOfFile
-      };
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Authorization': 'token ' + githubToken,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) throw new Error("Failed to update file: " + res.statusText);
-      const data = await res.json();
-      shaOfFile = data.content.sha;
-      alert("Entry added successfully!");
-      renderEntries(ctfLog);
-      updateCharts(ctfLog);
-      $('ctf-form').reset();
-      setStatus("");
-    } catch (err) {
-      setStatus("Error saving entry: " + err.message);
-    }
-  }
-
-  // Chart instances
-  let categoryCountChart = null;
-  let categoryPointsChart = null;
-  let monthlyEntriesChart = null;
-
-  // Prepare and update charts
-  function updateCharts(entries) {
-    // Data aggregation
-    const categoryCounts = {};
-    const categoryPoints = {};
-    const monthlyCounts = {};
-
-    entries.forEach(e => {
-      const cat = e.category || 'Uncategorized';
-      const pts = parseInt(e.points) || 0;
-      const month = e.date ? e.date.slice(0,7) : 'Unknown';
-
-      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-      categoryPoints[cat] = (categoryPoints[cat] || 0) + pts;
-      monthlyCounts[month] = (monthlyCounts[month] || 0) + 1;
-    });
-
-    // Sort keys
-    const sortedCats = Object.keys(categoryCounts).sort();
-    const sortedMonths = Object.keys(monthlyCounts).sort();
-
-    // Destroy old charts if exist
-    if(categoryCountChart) categoryCountChart.destroy();
-    if(categoryPointsChart) categoryPointsChart.destroy();
-    if(monthlyEntriesChart) monthlyEntriesChart.destroy();
-
-    // Category Count Chart (Bar)
-    const ctx1 = document.getElementById('category-count-chart').getContext('2d');
-    categoryCountChart = new Chart(ctx1, {
-      type: 'bar',
-      data: {
-        labels: sortedCats,
-        datasets: [{
-          label: '# of CTF Entries',
-          data: sortedCats.map(cat => categoryCounts[cat]),
-          backgroundColor: '#33cc33aa',
-          borderColor: '#33cc33',
-          borderWidth: 1,
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true, ticks: { stepSize: 1 } }
-        },
-        plugins: {
-          legend: { labels: { color: '#66ff66' } }
-        }
-      }
-    });
-
-    // Category Points Chart (Bar)
-    const ctx2 = document.getElementById('category-points-chart').getContext('2d');
-    categoryPointsChart = new Chart(ctx2, {
-      type: 'bar',
-      data: {
-        labels: sortedCats,
-        datasets: [{
-          label: 'Total Points',
-          data: sortedCats.map(cat => categoryPoints[cat]),
-          backgroundColor: '#66ff66aa',
-          borderColor: '#66ff66',
-          borderWidth: 1,
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
-        },
-        plugins: {
-          legend: { labels: { color: '#66ff66' } }
-        }
-      }
-    });
-
-    // Monthly Entries Chart (Line)
-    const ctx3 = document.getElementById('monthly-entries-chart').getContext('2d');
-    monthlyEntriesChart = new Chart(ctx3, {
+    // Points over time line chart setup
+    const ctxPoints = document.getElementById('points-chart').getContext('2d');
+    pointsChart = new Chart(ctxPoints, {
       type: 'line',
       data: {
-        labels: sortedMonths,
+        labels: pointsLabels,
         datasets: [{
-          label: 'Entries per Month',
-          data: sortedMonths.map(month => monthlyCounts[month]),
-          borderColor: '#33cc33',
-          backgroundColor: '#33cc33aa',
-          fill: true,
-          tension: 0.3,
+          label: 'Points Earned',
+          data: pointsData,
+          fill: false,
+          borderColor: '#0077cc',
+          tension: 0.1,
           pointRadius: 5,
-          pointHoverRadius: 7,
-        }]
+        }],
       },
       options: {
         responsive: true,
-        scales: {
-          y: { beginAtZero: true, stepSize: 1 }
-        },
         plugins: {
-          legend: { labels: { color: '#66ff66' } }
+          legend: { display: true },
+          tooltip: { mode: 'index' }
+        },
+        scales: {
+          y: { beginAtZero: true }
         }
       }
+    });
+
+    // Placement distribution pie chart setup
+    const ctxPlace = document.getElementById('placement-chart').getContext('2d');
+    placementChart = new Chart(ctxPlace, {
+      type: 'pie',
+      data: {
+        labels: placementLabels,
+        datasets: [{
+          label: 'Placement Distribution',
+          data: placementData,
+          backgroundColor: [
+            '#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#f44336', '#607d8b'
+          ],
+        }],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'right' },
+          tooltip: { enabled: true }
+        }
+      }
+    });
+  }
+
+  // Just start everything on the input tab when page loads
+  switchTab('input');
+})();
+</script>
+
+</body>
+</html>
