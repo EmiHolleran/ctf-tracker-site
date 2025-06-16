@@ -1,193 +1,1046 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CTF Tracker</title>
-  <!-- Linking Chart.js CDN so we can make those cool charts -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    /* Just some basic styling to make it look neat */
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f5f5f5;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🧪 CTF Tracker</title>
+<style>
+  /* -- BASE STYLES -- */
+  body {
+    margin: 0; padding: 20px;
+    font-family: monospace, monospace;
+    user-select: none;
+    background: #0f0f0f;
+    color: #66ff66;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+  }
+  a {
+    color: #44cc44;
+    text-decoration: underline;
+  }
+  h1, h2, h3 {
+    margin: 0 0 1em 0;
+  }
+  button {
+    cursor: pointer;
+    font-weight: bold;
+    background: #111;
+    border: 1px solid #33cc33;
+    color: #66ff66;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+  button:hover, button:focus {
+    background-color: #33cc33;
+    color: #000;
+    outline: none;
+  }
+  input, textarea, select {
+    background: #111;
+    border: 1px solid #33cc33;
+    color: #66ff66;
+    font-family: monospace;
+    padding: 8px;
+    margin: 5px 0;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 4px;
+    transition: border-color 0.2s ease;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: #55ff55;
+    outline: none;
+  }
+  label {
+    display: block;
+    margin-top: 12px;
+    font-size: 0.9em;
+    color: #44aa44;
+  }
+  .flex-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .flex-grow {
+    flex: 1 1 200px;
+  }
+  .small-input {
+    width: auto;
+    flex: none;
+  }
+  .hidden {
+    display: none;
+  }
+
+  /* -- TAB LAYOUT -- */
+  #tabs {
+    display: flex;
+    border-bottom: 2px solid #33cc33;
+    margin-bottom: 20px;
+  }
+  #tabs button {
+    flex-grow: 1;
+    border-radius: 0;
+    border-bottom: 4px solid transparent;
+  }
+  #tabs button.active {
+    border-bottom-color: #33cc33;
+    background-color: #222;
+    color: #aaffaa;
+  }
+
+  /* -- LOG ENTRY CARDS -- */
+  .entry {
+    border: 1px solid #33cc33;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    background: #111;
+    position: relative;
+  }
+  .entry strong {
+    color: #aaffaa;
+  }
+  .entry-buttons {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+  }
+  .entry-buttons button {
+    padding: 4px 8px;
+    font-size: 0.8em;
+  }
+  /* Edit modal */
+  #edit-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  #edit-modal.active {
+    visibility: visible;
+    opacity: 1;
+  }
+  #edit-modal-content {
+    background: #111;
+    border: 2px solid #33cc33;
+    padding: 20px;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 8px;
+    position: relative;
+  }
+  #edit-modal-content h3 {
+    margin-top: 0;
+  }
+  #edit-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 1.5em;
+    color: #66ff66;
+    cursor: pointer;
+  }
+  #edit-modal-close:hover {
+    color: #33cc33;
+  }
+
+  /* -- FILTER & SORT SECTION -- */
+  #filter-section {
+    margin-bottom: 20px;
+    border-bottom: 2px solid #33cc33;
+    padding-bottom: 20px;
+  }
+  #filter-section input,
+  #filter-section select {
+    width: auto;
+  }
+  #sort-select {
+    margin-left: 12px;
+  }
+
+  /* -- PAGINATION -- */
+  #pagination {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  #pagination button {
+    padding: 6px 12px;
+  }
+  #pagination button[disabled] {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  /* -- CHARTS -- */
+  #charts-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  canvas {
+    background: #111;
+    border: 1px solid #33cc33;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  /* -- SETTINGS -- */
+  #token-section {
+    margin-bottom: 30px;
+  }
+  #token-section p {
+    font-size: 0.9em;
+    color: #aaa;
+  }
+
+  /* -- GLITCH ANIMATION for Retro Hacker theme -- */
+  @keyframes glitch {
+    0% {
+      text-shadow:
+        2px 0 #66ff66,
+        -2px 0 #33cc33;
     }
-    .tab {
-      cursor: pointer;
-      padding: 10px 20px;
-      background-color: #ddd;
-      display: inline-block;
-      margin-right: 5px;
-      border-radius: 5px 5px 0 0;
+    20% {
+      text-shadow:
+        -2px 0 #66ff66,
+        2px 0 #33cc33;
     }
-    .tab.active {
-      background-color: #0077cc;
-      color: white;
+    40% {
+      text-shadow:
+        2px 0 #33cc33,
+        -2px 0 #66ff66;
     }
-    .tab-content {
-      background: white;
-      padding: 20px;
-      border-radius: 0 5px 5px 5px;
-      box-shadow: 0 0 10px #ccc;
-      margin-top: -5px;
+    60% {
+      text-shadow:
+        -2px 0 #33cc33,
+        2px 0 #66ff66;
     }
-    input, select, button {
-      margin-top: 10px;
-      padding: 8px;
-      width: 100%;
-      box-sizing: border-box;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+    80% {
+      text-shadow:
+        2px 0 #66ff66,
+        -2px 0 #33cc33;
     }
-    button {
-      background-color: #0077cc;
-      color: white;
-      border: none;
-      cursor: pointer;
+    100% {
+      text-shadow:
+        -2px 0 #66ff66,
+        2px 0 #33cc33;
     }
-    button:hover {
-      background-color: #005fa3;
+  }
+  .glitch {
+    animation: glitch 2s infinite linear alternate;
+  }
+
+  /* -- THEME STYLES -- */
+
+  /* Retro Hacker (default) */
+  body.theme-retro {
+    background: #0f0f0f;
+    color: #66ff66;
+  }
+  body.theme-retro a {
+    color: #44cc44;
+  }
+  body.theme-retro button,
+  body.theme-retro input,
+  body.theme-retro textarea,
+  body.theme-retro select {
+    background: #111;
+    border-color: #33cc33;
+    color: #66ff66;
+  }
+  body.theme-retro button:hover {
+    background-color: #33cc33;
+    color: #000;
+  }
+
+  /* Modern Hacker */
+  body.theme-modern {
+    background: #121212;
+    color: #00d8ff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  body.theme-modern a {
+    color: #00ffff;
+  }
+  body.theme-modern button,
+  body.theme-modern input,
+  body.theme-modern textarea,
+  body.theme-modern select {
+    background: #1e1e1e;
+    border-color: #00d8ff;
+    color: #00d8ff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  body.theme-modern button:hover {
+    background-color: #00d8ff;
+    color: #121212;
+  }
+  body.theme-modern #tabs button.active {
+    border-bottom-color: #00d8ff;
+    background-color: #222;
+    color: #00ffff;
+  }
+  body.theme-modern .entry {
+    background: #1e1e1e;
+    border-color: #00d8ff;
+  }
+  body.theme-modern #edit-modal-content {
+    background: #1e1e1e;
+    border-color: #00d8ff;
+  }
+  body.theme-modern canvas {
+    background: #1e1e1e;
+    border-color: #00d8ff;
+  }
+
+  /* Normal (light) */
+  body.theme-normal {
+    background: #fafafa;
+    color: #333;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  body.theme-normal a {
+    color: #0055cc;
+  }
+  body.theme-normal button,
+  body.theme-normal input,
+  body.theme-normal textarea,
+  body.theme-normal select {
+    background: #fff;
+    border-color: #ccc;
+    color: #333;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  body.theme-normal button:hover {
+    background-color: #0055cc;
+    color: #fff;
+  }
+  body.theme-normal #tabs button.active {
+    border-bottom-color: #0055cc;
+    background-color: #e1eaff;
+    color: #0055cc;
+  }
+  body.theme-normal .entry {
+    background: #fff;
+    border-color: #ccc;
+    color: #333;
+  }
+  body.theme-normal #edit-modal-content {
+    background: #fff;
+    border-color: #0055cc;
+    color: #333;
+  }
+  body.theme-normal canvas {
+    background: #fff;
+    border-color: #0055cc;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .flex-row {
+      flex-direction: column;
     }
-    canvas {
-      max-width: 100%;
-      margin-top: 30px;
+    #tabs button {
+      font-size: 0.9em;
     }
-  </style>
+    #pagination {
+      flex-wrap: wrap;
+    }
+  }
+</style>
 </head>
-<body>
+<body class="theme-retro">
 
-<!-- Tabs for switching between forms and charts -->
-<div>
-  <div id="tab-input" class="tab active">Add CTF Result</div>
-  <div id="tab-charts" class="tab">View Charts</div>
+<h1 class="glitch">🧪 CTF Tracker</h1>
+
+<!-- Tabs -->
+<div id="tabs" role="tablist" aria-label="Main Tabs">
+  <button role="tab" aria-selected="true" id="tab-add" tabindex="0">Add Entry</button>
+  <button role="tab" aria-selected="false" id="tab-view" tabindex="-1">View Entries</button>
+  <button role="tab" aria-selected="false" id="tab-charts" tabindex="-1">Graphs & Stats</button>
+  <button role="tab" aria-selected="false" id="tab-settings" tabindex="-1">Settings</button>
 </div>
 
-<!-- Main content container -->
-<div id="content" class="tab-content">
-  <!-- Input form for adding your CTF results -->
-  <div id="input-form">
-    <h2>Log Your CTF Challenge</h2>
-    <input id="competition-name" placeholder="Competition Name (e.g. picoCTF)" />
-    <input id="challenge-name" placeholder="Challenge Name" />
-    <select id="placement">
-      <option value="">Placement (leave blank if none)</option>
-      <option value="1">1st Place 🏆</option>
-      <option value="2">2nd Place 🥈</option>
-      <option value="3">3rd Place 🥉</option>
-      <option value="participant">Participant</option>
-    </select>
-    <input id="points" type="number" placeholder="Points earned (like 100)" />
-    <input id="date" type="date" />
-    <button id="add-entry">Add Entry</button>
-  </div>
+<!-- Tab panels -->
+<div id="tab-panels">
 
-  <!-- Charts will be shown here, hidden by default -->
-  <div id="charts" style="display:none;">
-    <h2>Your CTF Stats</h2>
-    <canvas id="points-chart"></canvas>
-    <canvas id="placement-chart"></canvas>
+  <!-- Add Entry -->
+  <section id="panel-add" role="tabpanel" aria-labelledby="tab-add">
+    <form id="ctf-form" autocomplete="off" style="max-width: 700px;">
+      <div class="flex-row">
+        <div class="flex-grow">
+          <label for="date">Date (YYYY-MM-DD):</label>
+          <input type="date" id="date" required />
+        </div>
+        <div class="flex-grow">
+          <label for="name">CTF Name:</label>
+          <input type="text" id="name" placeholder="e.g. HackTheBox" required />
+        </div>
+      </div>
+
+      <div class="flex-row">
+        <div class="flex-grow">
+          <label for="platform">Platform:</label>
+          <input type="text" id="platform" placeholder="e.g. HTB, CTFTime" required />
+        </div>
+        <div class="flex-grow">
+          <label for="team">Team Name:</label>
+          <input type="text" id="team" placeholder="Optional" />
+        </div>
+      </div>
+
+      <div class="flex-row">
+        <div class="flex-grow">
+          <label for="category">Category:</label>
+          <input type="text" id="category" placeholder="e.g. Web, Pwn, Crypto" />
+        </div>
+        <div class="flex-grow">
+          <label for="challenge">Challenges Completed:</label>
+          <input type="text" id="challenge" placeholder="Comma-separated" />
+        </div>
+      </div>
+
+      <div class="flex-row">
+        <div class="flex-grow">
+          <label for="points">Points:</label>
+          <input type="number" id="points" min="0" />
+        </div>
+        <div class="flex-grow">
+          <label for="placement">Placement:</label>
+          <input type="text" id="placement" placeholder="e.g. 3rd, Top 10" />
+        </div>
+      </div>
+
+      <label for="writeup">Writeup Link:</label>
+      <input type="url" id="writeup" placeholder="Optional" />
+
+      <label for="notes">Notes:</label>
+      <textarea id="notes" rows="3" placeholder="Any notes..."></textarea>
+
+      <button type="submit" style="margin-top: 15px;">Add CTF Entry</button>
+    </form>
+  </section>
+
+  <!-- View Entries -->
+  <section id="panel-view" role="tabpanel" aria-labelledby="tab-view" hidden>
+    <div id="filter-section" style="max-width: 700px;">
+      <h3>Filter & Sort Entries</h3>
+      <div class="flex-row" style="align-items:center;">
+        <input type="month" id="filter-date" class="small-input" title="Filter by month" />
+        <input type="text" id="filter-category" placeholder="Category filter" class="small-input" title="Filter by category" />
+        <select id="sort-select" title="Sort entries">
+          <option value="date-desc">Sort by Date ↓</option>
+          <option value="date-asc">Sort by Date ↑</option>
+          <option value="points-desc">Sort by Points ↓</option>
+          <option value="points-asc">Sort by Points ↑</option>
+          <option value="name-asc">Sort by Name A→Z</option>
+          <option value="name-desc">Sort by Name Z→A</option>
+          <option value="category-asc">Sort by Category A→Z</option>
+          <option value="category-desc">Sort by Category Z→A</option>
+        </select>
+        <button id="apply-filter-btn">Apply Filter</button>
+        <button id="clear-filter-btn">Clear Filter</button>
+      </div>
+    </div>
+
+    <div id="log-entries" style="max-width: 700px; margin-top: 15px;">
+      <p>Loading entries...</p>
+    </div>
+    <div id="pagination"></div>
+  </section>
+
+  <!-- Graphs & Stats -->
+  <section id="panel-charts" role="tabpanel" aria-labelledby="tab-charts" hidden>
+    <div id="charts-container" style="max-width: 900px; margin: 0 auto;">
+      <h3>CTF Statistics</h3>
+      <canvas id="category-chart" height="200" aria-label="Chart of entries per category" role="img"></canvas>
+      <canvas id="points-chart" height="200" aria-label="Chart of points per CTF" role="img"></canvas>
+      <canvas id="placement-chart" height="200" aria-label="Chart of placements distribution" role="img"></canvas>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden style="max-width: 700px;">
+    <h3>Settings</h3>
+    <div id="token-section">
+      <label for="token-input"><strong>GitHub Personal Access Token (PAT):</strong></label>
+      <input type="password" id="token-input" placeholder="GitHub PAT (repo scope)" autocomplete="new-password" />
+      <button id="save-token-btn">Save Token</button>
+      <p>(Your token stays in this browser session only, not saved on any server.)</p>
+    </div>
+    <div style="margin-top: 20px;">
+      <label for="theme-select"><strong>Select Theme:</strong></label>
+      <select id="theme-select">
+        <option value="retro">Retro Hacker</option>
+        <option value="modern">Modern Hacker</option>
+        <option value="normal">Normal (Light)</option>
+      </select>
+    </div>
+  </section>
+</div>
+
+<!-- Edit Entry Modal -->
+<div id="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" tabindex="-1">
+  <div id="edit-modal-content">
+    <button id="edit-modal-close" aria-label="Close edit form">&times;</button>
+    <h3 id="edit-modal-title">Edit CTF Entry</h3>
+    <form id="edit-form" autocomplete="off">
+      <div class="flex-row">
+        <div class="flex-grow">
+          <label for="edit-date">Date (YYYY-MM-DD):</label>
+          <input type="date" id="edit-date" required />
+        </div>
+        <div class="flex-grow">
+          <label for="edit-name">CTF Name:</label>
+          <input type="text" id="edit-name" required />
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-grow">
+          <label for="edit-platform">Platform:</label>
+          <input type="text" id="edit-platform" required />
+        </div>
+        <div class="flex-grow">
+          <label for="edit-team">Team Name:</label>
+          <input type="text" id="edit-team" />
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-grow">
+          <label for="edit-category">Category:</label>
+          <input type="text" id="edit-category" />
+        </div>
+        <div class="flex-grow">
+          <label for="edit-challenge">Challenges Completed:</label>
+          <input type="text" id="edit-challenge" />
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-grow">
+          <label for="edit-points">Points:</label>
+          <input type="number" id="edit-points" min="0" />
+        </div>
+        <div class="flex-grow">
+          <label for="edit-placement">Placement:</label>
+          <input type="text" id="edit-placement" />
+        </div>
+      </div>
+      <label for="edit-writeup">Writeup Link:</label>
+      <input type="url" id="edit-writeup" />
+      <label for="edit-notes">Notes:</label>
+      <textarea id="edit-notes" rows="3"></textarea>
+      <button type="submit" style="margin-top:15px;">Save Changes</button>
+    </form>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (() => {
-  // Okay, here we go — this app tracks your CTFs and shows cool charts
-
-  // State: holds all your entries
+  // State variables
   let ctfEntries = [];
+  let currentTab = 'add';
+  let currentEditId = null;
+  let currentFilter = { date: null, category: '', sort: 'date-desc' };
+  let entriesPerPage = 5;
+  let currentPage = 1;
+  let githubToken = null;
 
-  // Keeps track of which tab is currently active: "input" or "charts"
-  let currentTab = 'input';
+  // Cache DOM
+  const tabs = {
+    add: document.getElementById('tab-add'),
+    view: document.getElementById('tab-view'),
+    charts: document.getElementById('tab-charts'),
+    settings: document.getElementById('tab-settings'),
+  };
+  const panels = {
+    add: document.getElementById('panel-add'),
+    view: document.getElementById('panel-view'),
+    charts: document.getElementById('panel-charts'),
+    settings: document.getElementById('panel-settings'),
+  };
+  const ctfForm = document.getElementById('ctf-form');
+  const logEntries = document.getElementById('log-entries');
+  const filterDate = document.getElementById('filter-date');
+  const filterCategory = document.getElementById('filter-category');
+  const sortSelect = document.getElementById('sort-select');
+  const applyFilterBtn = document.getElementById('apply-filter-btn');
+  const clearFilterBtn = document.getElementById('clear-filter-btn');
+  const paginationDiv = document.getElementById('pagination');
+  const editModal = document.getElementById('edit-modal');
+  const editModalClose = document.getElementById('edit-modal-close');
+  const editForm = document.getElementById('edit-form');
 
-  // Grab the DOM elements we'll need later
-  const tabInput = document.getElementById('tab-input');
-  const tabCharts = document.getElementById('tab-charts');
-  const inputForm = document.getElementById('input-form');
-  const chartsDiv = document.getElementById('charts');
-  const addEntryBtn = document.getElementById('add-entry');
+  const tokenInput = document.getElementById('token-input');
+  const saveTokenBtn = document.getElementById('save-token-btn');
+  const themeSelect = document.getElementById('theme-select');
 
-  // Chart.js objects so we can update charts later
-  let pointsChart;
-  let placementChart;
+  // Chart variables
+  let categoryChart, pointsChart, placementChart;
 
-  // When user clicks on the "Add Entry" button, this happens
-  addEntryBtn.addEventListener('click', () => {
-    // Get values from inputs, trimming just in case
-    const compName = document.getElementById('competition-name').value.trim();
-    const challengeName = document.getElementById('challenge-name').value.trim();
-    const placement = document.getElementById('placement').value;
-    const points = parseInt(document.getElementById('points').value, 10);
-    const date = document.getElementById('date').value;
-
-    // Quick input validation to not let empty stuff in
-    if (!compName || !challengeName || !date || isNaN(points)) {
-      alert('Hey! You gotta fill in Competition, Challenge, Points, and Date.');
-      return;
+  // Initialize
+  function init() {
+    // Load from localStorage
+    const storedEntries = localStorage.getItem('ctfEntries');
+    if (storedEntries) {
+      try {
+        ctfEntries = JSON.parse(storedEntries);
+      } catch {
+        ctfEntries = [];
+      }
     }
+    const storedToken = sessionStorage.getItem('githubToken');
+    if (storedToken) {
+      githubToken = storedToken;
+      tokenInput.value = githubToken;
+    }
+    const storedTheme = localStorage.getItem('ctfTheme') || 'retro';
+    setTheme(storedTheme);
+    themeSelect.value = storedTheme;
 
-    // Add the new CTF entry to our array
-    ctfEntries.push({
-      competition: compName,
-      challenge: challengeName,
-      placement: placement || 'participant', // default to participant if none
-      points: points,
-      date: date
-    });
+    setupTabs();
+    setupEventListeners();
+    renderCurrentTab();
+  }
 
-    // Clear inputs for next entry because we’re neat like that
-    document.getElementById('competition-name').value = '';
-    document.getElementById('challenge-name').value = '';
-    document.getElementById('placement').value = '';
-    document.getElementById('points').value = '';
-    document.getElementById('date').value = '';
+  // Theme setter
+  function setTheme(themeName) {
+    document.body.classList.remove('theme-retro', 'theme-modern', 'theme-normal');
+    switch(themeName) {
+      case 'modern': document.body.classList.add('theme-modern'); break;
+      case 'normal': document.body.classList.add('theme-normal'); break;
+      default: document.body.classList.add('theme-retro'); break;
+    }
+    localStorage.setItem('ctfTheme', themeName);
+  }
 
-    alert('Sweet! Your CTF result was added.');
-
-    // Optional: Could automatically switch to charts tab here if you want
+  themeSelect.addEventListener('change', (e) => {
+    setTheme(e.target.value);
   });
 
-  // Tab switching function, keeps UI tidy
-  function switchTab(tab) {
-    currentTab = tab;
-    if (tab === 'input') {
-      tabInput.classList.add('active');
-      tabCharts.classList.remove('active');
-      inputForm.style.display = 'block';
-      chartsDiv.style.display = 'none';
-    } else if (tab === 'charts') {
-      tabInput.classList.remove('active');
-      tabCharts.classList.add('active');
-      inputForm.style.display = 'none';
-      chartsDiv.style.display = 'block';
-      renderCharts(); // Show the charts with fresh data
+  // Tabs setup
+  function setupTabs() {
+    Object.entries(tabs).forEach(([key, btn]) => {
+      btn.addEventListener('click', () => {
+        switchTab(key);
+      });
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          let keys = Object.keys(tabs);
+          let idx = keys.indexOf(key);
+          if (e.key === 'ArrowRight') {
+            idx = (idx + 1) % keys.length;
+          } else {
+            idx = (idx - 1 + keys.length) % keys.length;
+          }
+          tabs[keys[idx]].focus();
+        }
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          switchTab(key);
+        }
+      });
+    });
+  }
+
+  function switchTab(tabName) {
+    if (tabName === currentTab) return;
+    // Update aria-selected and tabindex on buttons
+    Object.entries(tabs).forEach(([key, btn]) => {
+      const selected = key === tabName;
+      btn.setAttribute('aria-selected', selected);
+      btn.tabIndex = selected ? 0 : -1;
+    });
+    // Show/hide panels
+    Object.entries(panels).forEach(([key, panel]) => {
+      panel.hidden = key !== tabName;
+    });
+    currentTab = tabName;
+    if (tabName === 'view') {
+      renderEntries();
+    } else if (tabName === 'charts') {
+      renderCharts();
     }
   }
 
-  // Attach tab click events
-  tabInput.addEventListener('click', () => switchTab('input'));
-  tabCharts.addEventListener('click', () => switchTab('charts'));
+  // Event Listeners setup
+  function setupEventListeners() {
+    ctfForm.addEventListener('submit', e => {
+      e.preventDefault();
+      addEntry();
+    });
 
-  // Function to make the charts with Chart.js using your data
+    applyFilterBtn.addEventListener('click', () => {
+      currentFilter.date = filterDate.value || null;
+      currentFilter.category = filterCategory.value.trim().toLowerCase();
+      currentFilter.sort = sortSelect.value;
+      currentPage = 1;
+      renderEntries();
+    });
+
+    clearFilterBtn.addEventListener('click', () => {
+      filterDate.value = '';
+      filterCategory.value = '';
+      sortSelect.value = 'date-desc';
+      currentFilter = { date: null, category: '', sort: 'date-desc' };
+      currentPage = 1;
+      renderEntries();
+    });
+
+    editModalClose.addEventListener('click', closeEditModal);
+    editModal.addEventListener('click', e => {
+      if (e.target === editModal) {
+        closeEditModal();
+      }
+    });
+    editForm.addEventListener('submit', e => {
+      e.preventDefault();
+      saveEditEntry();
+    });
+
+    saveTokenBtn.addEventListener('click', () => {
+      githubToken = tokenInput.value.trim();
+      if (githubToken) {
+        sessionStorage.setItem('githubToken', githubToken);
+        alert('GitHub token saved for this session.');
+      } else {
+        sessionStorage.removeItem('githubToken');
+        alert('GitHub token cleared.');
+      }
+    });
+  }
+
+  // Add Entry
+  function addEntry() {
+    const date = ctfForm.date.value;
+    const name = ctfForm.name.value.trim();
+    const platform = ctfForm.platform.value.trim();
+    const team = ctfForm.team.value.trim();
+    const category = ctfForm.category.value.trim();
+    const challenge = ctfForm.challenge.value.trim();
+    const points = Number(ctfForm.points.value) || 0;
+    const placement = ctfForm.placement.value.trim();
+    const writeup = ctfForm.writeup.value.trim();
+    const notes = ctfForm.notes.value.trim();
+
+    if (!date || !name || !platform) {
+      alert('Date, CTF Name and Platform are required.');
+      return;
+    }
+
+    const newEntry = {
+      id: Date.now(),
+      date,
+      name,
+      platform,
+      team,
+      category,
+      challenge,
+      points,
+      placement,
+      writeup,
+      notes,
+    };
+    ctfEntries.push(newEntry);
+    saveEntries();
+    ctfForm.reset();
+    alert('Entry added!');
+    if(currentTab === 'view') renderEntries();
+  }
+
+  // Save entries to localStorage
+  function saveEntries() {
+    localStorage.setItem('ctfEntries', JSON.stringify(ctfEntries));
+  }
+
+  // Render entries list with filters, sorting, and pagination
+  function renderEntries() {
+    if (ctfEntries.length === 0) {
+      logEntries.innerHTML = '<p>No entries yet. Add some!</p>';
+      paginationDiv.innerHTML = '';
+      return;
+    }
+
+    // Filter
+    let filtered = ctfEntries.slice();
+    if (currentFilter.date) {
+      filtered = filtered.filter(e => e.date.startsWith(currentFilter.date));
+    }
+    if (currentFilter.category) {
+      filtered = filtered.filter(e => e.category.toLowerCase().includes(currentFilter.category));
+    }
+
+    // Sort
+    filtered.sort((a,b) => {
+      switch(currentFilter.sort) {
+        case 'date-asc': return a.date.localeCompare(b.date);
+        case 'date-desc': return b.date.localeCompare(a.date);
+        case 'points-asc': return a.points - b.points;
+        case 'points-desc': return b.points - a.points;
+        case 'name-asc': return a.name.localeCompare(b.name);
+        case 'name-desc': return b.name.localeCompare(a.name);
+        case 'category-asc': return a.category.localeCompare(b.category);
+        case 'category-desc': return b.category.localeCompare(a.category);
+        default: return 0;
+      }
+    });
+
+    // Pagination
+    const totalPages = Math.ceil(filtered.length / entriesPerPage);
+    if(currentPage > totalPages) currentPage = totalPages || 1;
+    const startIdx = (currentPage -1) * entriesPerPage;
+    const pagedEntries = filtered.slice(startIdx, startIdx + entriesPerPage);
+
+    if(pagedEntries.length === 0) {
+      logEntries.innerHTML = '<p>No entries match the filter criteria.</p>';
+      paginationDiv.innerHTML = '';
+      return;
+    }
+
+    // Render entries
+    logEntries.innerHTML = '';
+    pagedEntries.forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'entry';
+      div.tabIndex = 0;
+      div.innerHTML = `
+        <div class="entry-buttons" aria-label="Edit and delete entry controls">
+          <button aria-label="Edit entry ${entry.name}" data-id="${entry.id}" class="edit-btn">Edit</button>
+          <button aria-label="Delete entry ${entry.name}" data-id="${entry.id}" class="delete-btn">Delete</button>
+        </div>
+        <strong>${escapeHtml(entry.name)}</strong> (${escapeHtml(entry.platform)}) — ${escapeHtml(entry.date)}<br/>
+        <strong>Category:</strong> ${escapeHtml(entry.category || 'N/A')} | 
+        <strong>Team:</strong> ${escapeHtml(entry.team || 'Solo')} | 
+        <strong>Challenges:</strong> ${escapeHtml(entry.challenge || 'None')}<br/>
+        <strong>Points:</strong> ${entry.points} | 
+        <strong>Placement:</strong> ${escapeHtml(entry.placement || 'N/A')}<br/>
+        ${entry.writeup ? `<a href="${escapeHtml(entry.writeup)}" target="_blank" rel="noopener noreferrer">Writeup</a> | ` : ''}
+        ${entry.notes ? `<em>Notes:</em> ${escapeHtml(entry.notes)}` : ''}
+      `;
+      logEntries.appendChild(div);
+    });
+
+    // Attach edit/delete events
+    logEntries.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        openEditModal(Number(e.target.dataset.id));
+      });
+    });
+    logEntries.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        if(confirm('Are you sure you want to delete this entry?')) {
+          deleteEntry(Number(e.target.dataset.id));
+        }
+      });
+    });
+
+    // Pagination controls
+    renderPagination(totalPages);
+  }
+
+  function renderPagination(totalPages) {
+    if(totalPages <= 1) {
+      paginationDiv.innerHTML = '';
+      return;
+    }
+    paginationDiv.innerHTML = '';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = 'Prev';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.addEventListener('click', () => {
+      if(currentPage > 1) {
+        currentPage--;
+        renderEntries();
+      }
+    });
+    paginationDiv.appendChild(prevBtn);
+
+    // Page numbers
+    for(let i=1; i<=totalPages; i++) {
+      const pageBtn = document.createElement('button');
+      pageBtn.textContent = i;
+      if(i === currentPage) {
+        pageBtn.disabled = true;
+      }
+      pageBtn.addEventListener('click', () => {
+        currentPage = i;
+        renderEntries();
+      });
+      paginationDiv.appendChild(pageBtn);
+    }
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = 'Next';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.addEventListener('click', () => {
+      if(currentPage < totalPages) {
+        currentPage++;
+        renderEntries();
+      }
+    });
+    paginationDiv.appendChild(nextBtn);
+  }
+
+  // Escape HTML helper (simple)
+  function escapeHtml(text) {
+    if(!text) return '';
+    return text.replace(/[&<>"']/g, function(m) {
+      return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[m];
+    });
+  }
+
+  // Delete entry
+  function deleteEntry(id) {
+    ctfEntries = ctfEntries.filter(e => e.id !== id);
+    saveEntries();
+    renderEntries();
+  }
+
+  // Edit entry modal open
+  function openEditModal(id) {
+    const entry = ctfEntries.find(e => e.id === id);
+    if(!entry) return alert('Entry not found');
+
+    currentEditId = id;
+
+    editForm['edit-date'].value = entry.date;
+    editForm['edit-name'].value = entry.name;
+    editForm['edit-platform'].value = entry.platform;
+    editForm['edit-team'].value = entry.team;
+    editForm['edit-category'].value = entry.category;
+    editForm['edit-challenge'].value = entry.challenge;
+    editForm['edit-points'].value = entry.points;
+    editForm['edit-placement'].value = entry.placement;
+    editForm['edit-writeup'].value = entry.writeup;
+    editForm['edit-notes'].value = entry.notes;
+
+    editModal.classList.add('active');
+    editModal.focus();
+  }
+
+  function closeEditModal() {
+    currentEditId = null;
+    editModal.classList.remove('active');
+  }
+
+  // Save edits
+  function saveEditEntry() {
+    if(currentEditId === null) return;
+
+    const entryIndex = ctfEntries.findIndex(e => e.id === currentEditId);
+    if(entryIndex === -1) return alert('Entry not found');
+
+    const edited = {
+      id: currentEditId,
+      date: editForm['edit-date'].value,
+      name: editForm['edit-name'].value.trim(),
+      platform: editForm['edit-platform'].value.trim(),
+      team: editForm['edit-team'].value.trim(),
+      category: editForm['edit-category'].value.trim(),
+      challenge: editForm['edit-challenge'].value.trim(),
+      points: Number(editForm['edit-points'].value) || 0,
+      placement: editForm['edit-placement'].value.trim(),
+      writeup: editForm['edit-writeup'].value.trim(),
+      notes: editForm['edit-notes'].value.trim(),
+    };
+
+    if(!edited.date || !edited.name || !edited.platform) {
+      alert('Date, Name, and Platform are required.');
+      return;
+    }
+
+    ctfEntries[entryIndex] = edited;
+    saveEntries();
+    closeEditModal();
+    alert('Entry updated!');
+    if(currentTab === 'view') renderEntries();
+  }
+
+  // Render charts using Chart.js
   function renderCharts() {
-    // Prepare data for points chart
-    const sortedEntries = [...ctfEntries].sort((a,b) => new Date(a.date) - new Date(b.date));
-    const pointsLabels = sortedEntries.map(e => `${e.competition} - ${e.challenge}`);
-    const pointsData = sortedEntries.map(e => e.points);
+    if(ctfEntries.length === 0) {
+      const chartsContainer = document.getElementById('charts-container');
+      chartsContainer.innerHTML = '<p>No entries to display charts. Add some first.</p>';
+      return;
+    }
 
-    // For placement chart, count how many of each placement
+    // Entries per category
+    const categoryCounts = {};
+    ctfEntries.forEach(e => {
+      const cat = e.category || 'Uncategorized';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+    const categoryLabels = Object.keys(categoryCounts);
+    const categoryData = Object.values(categoryCounts);
+
+    // Points over time (by CTF)
+    const pointsLabels = ctfEntries.map(e => e.name);
+    const pointsData = ctfEntries.map(e => e.points);
+
+    // Placement distribution
     const placementCounts = {};
     ctfEntries.forEach(e => {
-      placementCounts[e.placement] = (placementCounts[e.placement] || 0) + 1;
+      let p = e.placement ? e.placement.toLowerCase() : 'unknown';
+      // Normalize placements (e.g. 1st, 2nd, 3rd, top 10)
+      if(/^\d+(st|nd|rd|th)$/.test(p)) {
+        p = p.match(/^\d+/)[0] + ' place';
+      } else if(p.includes('top')) {
+        p = 'Top placements';
+      } else {
+        p = 'Other/Unknown';
+      }
+      placementCounts[p] = (placementCounts[p] || 0) + 1;
     });
     const placementLabels = Object.keys(placementCounts);
     const placementData = Object.values(placementCounts);
 
-    // Destroy old charts if they exist to avoid duplicates
-    if (pointsChart) pointsChart.destroy();
-    if (placementChart) placementChart.destroy();
+    // Destroy old charts if exist
+    if(categoryChart) categoryChart.destroy();
+    if(pointsChart) pointsChart.destroy();
+    if(placementChart) placementChart.destroy();
 
-    // Points over time line chart setup
+    // Category Chart
+    const ctxCat = document.getElementById('category-chart').getContext('2d');
+    categoryChart = new Chart(ctxCat, {
+      type: 'bar',
+      data: {
+        labels: categoryLabels,
+        datasets: [{
+          label: 'Entries per Category',
+          data: categoryData,
+          backgroundColor: '#33cc33',
+        }],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { mode: 'index' }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    // Points Chart
     const ctxPoints = document.getElementById('points-chart').getContext('2d');
     pointsChart = new Chart(ctxPoints, {
       type: 'line',
@@ -214,7 +1067,7 @@
       }
     });
 
-    // Placement distribution pie chart setup
+    // Placement Chart
     const ctxPlace = document.getElementById('placement-chart').getContext('2d');
     placementChart = new Chart(ctxPlace, {
       type: 'pie',
@@ -238,10 +1091,14 @@
     });
   }
 
-  // Just start everything on the input tab when page loads
-  switchTab('input');
+  // Render the currently active tab
+  function renderCurrentTab() {
+    switchTab(currentTab);
+  }
+
+  // Initialize app
+  init();
 })();
 </script>
-
 </body>
 </html>
