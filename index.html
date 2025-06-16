@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🧪 CTF Tracker - Retro Hacker Style</title>
+  <style>
+    /* Retro hacker vibe */
+    body {
+      background: #0f0f0f;
+      color: #66ff66;
+      font-family: 'Courier New', Courier, monospace;
+      margin: 0; padding: 20px;
+      user-select: none;
+    }
+    h1 {
+      border-bottom: 2px solid #33cc33;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    input, textarea, select, button {
+      background: #111;
+      border: 1px solid #33cc33;
+      color: #66ff66;
+      font-family: monospace;
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 4px;
+    }
+    button {
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: #33cc33;
+      color: #000;
+    }
+    label {
+      margin-top: 12px;
+      display: block;
+      font-size: 0.9em;
+      color: #44aa44;
+    }
+    #log-entries {
+      margin-top: 30px;
+    }
+    .entry {
+      border: 1px solid #33cc33;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      background: #111;
+    }
+    .entry strong {
+      color: #aaffaa;
+    }
+    a {
+      color: #44cc44;
+      text-decoration: underline;
+    }
+    .flex-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .flex-grow {
+      flex: 1 1 200px;
+    }
+    #token-section {
+      margin-bottom: 30px;
+      border-bottom: 2px solid #33cc33;
+      padding-bottom: 20px;
+    }
+    #filter-section {
+      margin-top: 20px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #33cc33;
+      padding-bottom: 20px;
+    }
+    .small-input {
+      width: auto;
+      flex: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧪 CTF Tracker - Retro Hacker</h1>
+
+  <div id="token-section">
+    <label for="token-input"><strong>Enter your GitHub Personal Access Token (PAT):</strong></label>
+    <input type="password" id="token-input" placeholder="GitHub PAT (repo scope)" />
+    <button id="save-token-btn">Save Token</button>
+    <p style="font-size: 0.9em; color:#aaa;">
+      (Your token stays in this browser session only, not saved on any server.)
+    </p>
+  </div>
+
+  <form id="ctf-form">
+    <div class="flex-row">
+      <div class="flex-grow">
+        <label for="date">Date (YYYY-MM-DD):</label>
+        <input type="date" id="date" required />
+      </div>
+      <div class="flex-grow">
+        <label for="name">CTF Name:</label>
+        <input type="text" id="name" placeholder="e.g. HackTheBox" required />
+      </div>
+    </div>
+
+    <div class="flex-row">
+      <div class="flex-grow">
+        <label for="platform">Platform:</label>
+        <input type="text" id="platform" placeholder="e.g. HTB, CTFTime" required />
+      </div>
+      <div class="flex-grow">
+        <label for="team">Team Name:</label>
+        <input type="text" id="team" placeholder="Optional" />
+      </div>
+    </div>
+
+    <div class="flex-row">
+      <div class="flex-grow">
+        <label for="category">Category:</label>
+        <input type="text" id="category" placeholder="e.g. Web, Pwn, Crypto" />
+      </div>
+      <div class="flex-grow">
+        <label for="challenge">Challenges Completed:</label>
+        <input type="text" id="challenge" placeholder="Comma-separated" />
+      </div>
+    </div>
+
+    <div class="flex-row">
+      <div class="flex-grow">
+        <label for="points">Points:</label>
+        <input type="number" id="points" min="0" />
+      </div>
+      <div class="flex-grow">
+        <label for="placement">Placement:</label>
+        <input type="text" id="placement" placeholder="e.g. 3rd, Top 10" />
+      </div>
+    </div>
+
+    <label for="writeup">Writeup Link:</label>
+    <input type="url" id="writeup" placeholder="Optional" />
+
+    <label for="notes">Notes:</label>
+    <textarea id="notes" rows="3" placeholder="Any notes..."></textarea>
+
+    <button type="submit" style="margin-top: 15px;">Add CTF Entry</button>
+  </form>
+
+  <div id="filter-section">
+    <h3>Filter entries</h3>
+    <div class="flex-row">
+      <input type="month" id="filter-date" class="small-input" />
+      <input type="text" id="filter-category" placeholder="Category filter" class="small-input" />
+      <button id="apply-filter-btn">Apply Filter</button>
+      <button id="clear-filter-btn">Clear Filter</button>
+    </div>
+  </div>
+
+  <h2>CTF Entries</h2>
+  <div id="log-entries">
+    <p>Loading entries...</p>
+  </div>
+
+<script>
+(() => {
+  const REPO_OWNER = "YOUR_GITHUB_USERNAME";
+  const REPO_NAME = "YOUR_REPO_NAME";
+  const FILE_PATH = "ctf_log.json";
+
+  let githubToken = null;
+  let ctfLog = [];
+  let shaOfFile = null;
+
+  const $ = (id) => document.getElementById(id);
+  const setStatus = (msg) => {
+    const logEntries = $('log-entries');
+    logEntries.innerHTML = '<p>' + msg + '</p>';
+  };
+
+  // Save token button
+  $('save-token-btn').addEventListener('click', () => {
+    const token = $('token-input').value.trim();
+    if (!token) {
+      alert("Please enter your GitHub token.");
+      return;
+    }
+    githubToken = token;
+    alert("Token saved in session. You can now add entries.");
+    fetchCTFLog();
+  });
+
+  // Fetch the JSON log file from GitHub
+  async function fetchCTFLog() {
+    setStatus("Loading entries...");
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: 'token ' + githubToken }
+      });
+      if (!res.ok) throw new Error("Failed to load log file: " + res.status);
+      const data = await res.json();
+      shaOfFile = data.sha;
+      const content = atob(data.content);
+      ctfLog = JSON.parse(content);
+      renderEntries(ctfLog);
+    } catch (err) {
+      setStatus("Error loading entries: " + err.message);
+    }
+  }
+
+  // Render the log entries on the page
+  function renderEntries(entries) {
+    const container = $('log-entries');
+    if (!entries.length) {
+      container.innerHTML = '<p>No entries found yet.</p>';
+      return;
+    }
+    container.innerHTML = "";
+    entries.forEach(entry => {
+      const div = document.createElement('div');
+      div.className = "entry";
+      div.innerHTML = `
+        <strong>${entry.date} - ${entry.name}</strong><br/>
+        <em>Platform:</em> ${entry.platform || '-'}<br/>
+        <em>Team:</em> ${entry.team || '-'}<br/>
+        <em>Category:</em> ${entry.category || '-'}<br/>
+        <em>Challenges:</em> ${entry.challenge || '-'}<br/>
+        <em>Points:</em> ${entry.points || '-'}<br/>
+        <em>Placement:</em> ${entry.placement || '-'}<br/>
+        ${entry.writeup ? `<em>Writeup:</em> <a href="${entry.writeup}" target="_blank" rel="noopener noreferrer">${entry.writeup}</a><br/>` : ''}
+        <em>Notes:</em> ${entry.notes || '-'}
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  // Filter entries
+  $('apply-filter-btn').addEventListener('click', () => {
+    const filterDate = $('filter-date').value;  // format YYYY-MM
+    const filterCategory = $('filter-category').value.trim().toLowerCase();
+    const filtered = ctfLog.filter(e => {
+      let matchDate = true;
+      let matchCategory = true;
+      if (filterDate) {
+        matchDate = e.date.startsWith(filterDate);
+      }
+      if (filterCategory) {
+        matchCategory = e.category && e.category.toLowerCase().includes(filterCategory);
+      }
+      return matchDate && matchCategory;
+    });
+    renderEntries(filtered);
+  });
+
+  // Clear filter
+  $('clear-filter-btn').addEventListener('click', () => {
+    $('filter-date').value = '';
+    $('filter-category').value = '';
+    renderEntries(ctfLog);
+  });
+
+  // Add new entry form submit
+  $('ctf-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!githubToken) {
+      alert("Please enter and save your GitHub token first.");
+      return;
+    }
+
+    const newEntry = {
+      date: $('date').value,
+      name: $('name').value.trim(),
+      platform: $('platform').value.trim(),
+      team: $('team').value.trim(),
+      category: $('category').value.trim(),
+      challenge: $('challenge').value.trim(),
+      points: $('points').value.trim(),
+      placement: $('placement').value.trim(),
+      writeup: $('writeup').value.trim(),
+      notes: $('notes').value.trim(),
+    };
+
+    // Basic validation
+    if (!newEntry.date || !newEntry.name || !newEntry.platform) {
+      alert("Date, CTF Name, and Platform are required.");
+      return;
+    }
+
+    ctfLog.push(newEntry);
+    await updateLogFile();
+  });
+
+  // Update the JSON file in GitHub repo with new content
+  async function updateLogFile() {
+    setStatus("Saving entry to GitHub...");
+    const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+    try {
+      const contentEncoded = btoa(JSON.stringify(ctfLog, null, 2));
+      const body = {
+        message: `Add CTF entry: ${ctfLog[ctfLog.length - 1].name} (${ctfLog[ctfLog.length - 1].date})`,
+        content: contentEncoded,
+        sha: shaOfFile
+      };
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token ' + githubToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error("Failed to update file: " + res.statusText);
+      const data = await res.json();
+      shaOfFile = data.content.sha;
+      alert("Entry added successfully!");
+      renderEntries(ctfLog);
+      $('ctf-form').reset();
+      setStatus("");
+    } catch (err) {
+      setStatus("Error saving entry: " + err.message);
+    }
+  }
+
+})();
+</script>
+
+</body>
+</html>
