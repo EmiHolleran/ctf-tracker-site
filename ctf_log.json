@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "date": "2025-06-16",
+    "name": "test",
+    "platform": "test",
+    "team": "test",
+    "category": "test",
+    "challenge": "test",
+    "points": "0",
+    "placement": "test",
+    "writeup": "",
+    "notes": ""
+  }
+]
